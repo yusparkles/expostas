@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>C.R.I.S — Presas Expostas</title>
+
+<style>
+:root{
+  --red:#b00000;
+  --dark:#050505;
+}
+body{
+  margin:0;
+  background:var(--dark);
+  color:#eee;
+  font-family: monospace;
+}
+.scanlines{
+  pointer-events:none;
+  position:fixed;
+  inset:0;
+  background:linear-gradient(rgba(255,255,255,.03) 50%, rgba(0,0,0,.05) 50%);
+  background-size:100% 3px;
+  z-index:99;
+}
+.blood{
+  position:fixed;
+  inset:0;
+  background:url("https://i.imgur.com/2yYayZk.png") repeat-x;
+  opacity:.25;
+  pointer-events:none;
+  z-index:98;
+}
+header{
+  padding:20px;
+  border-bottom:1px solid var(--red);
+}
+h1{
+  color:var(--red);
+  animation:glitch 2s infinite;
+}
+@keyframes glitch{
+  0%{text-shadow:2px 0 red}
+  25%{text-shadow:-2px 0 cyan}
+  50%{text-shadow:2px 2px lime}
+  75%{text-shadow:-2px -2px red}
+  100%{text-shadow:none}
+}
+.container{padding:20px}
+.box{
+  border:1px solid #400;
+  background:#0a0a0a;
+  padding:15px;
+  margin-bottom:15px;
+  box-shadow:0 0 15px #200;
+}
+button,input,textarea{
+  width:100%;
+  padding:8px;
+  margin:6px 0;
+  background:#0e0e0e;
+  color:#fff;
+  border:1px solid #500;
+}
+button{cursor:pointer}
+.hidden{display:none}
+
+.dice-area{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.dice{
+  width:60px;
+  height:60px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:30px;
+  border:2px solid #333;
+  background:#111;
+}
+.success{color:#00ff66;border-color:#00ff66}
+.fail{color:#ff3333;border-color:#ff3333}
+
+.attr{
+  display:flex;
+  justify-content:space-between;
+  margin:5px 0;
+}
+.attr input{width:60px}
+</style>
+</head>
+
+<body>
+
+<div class="scanlines"></div>
+<div class="blood"></div>
+
+<header>
+  <h1>C.R.I.S</h1>
+  <p>Campaign Registry & Investigation System</p>
+</header>
+
+<div class="container">
+
+<!-- TELA INICIAL -->
+<div id="startBox" class="box">
+  <h2>Presas Expostas</h2>
+  <button onclick="entrarPlayer()">Entrar como Player</button>
+  <button onclick="mostrarMestre()">Entrar como Mestre</button>
+</div>
+
+<!-- SENHA MESTRE -->
+<div id="senhaMestreBox" class="box hidden">
+  <input id="senhaMestre" placeholder="Senha do Mestre">
+  <button onclick="entrarMestre()">Entrar</button>
+</div>
+
+<!-- PLAYER -->
+<div id="playerBox" class="box hidden">
+  <h2>Ficha do Player</h2>
+
+  <input id="nome" placeholder="Nome do personagem">
+  <textarea id="historia" placeholder="História do personagem"></textarea>
+
+  <h3>Atributos</h3>
+  <div class="attr">Agilidade <input id="agi" type="number"></div>
+  <div class="attr">Carisma <input id="car" type="number"></div>
+  <div class="attr">Astúcia <input id="ast" type="number"></div>
+  <div class="attr">Força <input id="forca" type="number"></div>
+  <div class="attr">Vigor <input id="vig" type="number"></div>
+
+  <p>Shots: <span id="shots">0</span>/3</p>
+  <button onclick="addShot()">Adicionar Shot</button>
+
+  <p>Tensão: <span id="tensao">0</span>/10</p>
+
+  <h3>Dados</h3>
+  <input id="pool" type="number" min="1" value="1">
+  <button onclick="rolar()">Rolar Dados</button>
+
+  <div class="dice-area" id="diceArea"></div>
+
+  <button onclick="salvarPlayer()">Salvar Ficha</button>
+</div>
+
+<!-- MESTRE -->
+<div id="masterBox" class="box hidden">
+  <h2>Escudo do Mestre</h2>
+  <div id="listaPlayers"></div>
+</div>
+
+</div>
+
+<script>
+const SENHA_MESTRE = "6666";
+let shots = 0;
+let tensao = 0;
+
+/* NAVEGAÇÃO */
+function entrarPlayer(){
+  startBox.classList.add("hidden");
+  playerBox.classList.remove("hidden");
+  carregarPlayer();
+}
+
+function mostrarMestre(){
+  startBox.classList.add("hidden");
+  senhaMestreBox.classList.remove("hidden");
+}
+
+function entrarMestre(){
+  if(senhaMestre.value !== SENHA_MESTRE){
+    alert("Senha incorreta");
+    return;
+  }
+  senhaMestreBox.classList.add("hidden");
+  masterBox.classList.remove("hidden");
+  carregarMestre();
+}
+
+/* PLAYER */
+function salvarPlayer(){
+  const ficha = {
+    nome: nome.value,
+    historia: historia.value,
+    agi: agi.value,
+    car: car.value,
+    ast: ast.value,
+    forca: forca.value,
+    vig: vig.value,
+    shots,
+    tensao
+  };
+  localStorage.setItem("player_ficha", JSON.stringify(ficha));
+
+  let lista = JSON.parse(localStorage.getItem("players")||"[]");
+  lista[0] = ficha;
+  localStorage.setItem("players", JSON.stringify(lista));
+}
+
+function carregarPlayer(){
+  const d = JSON.parse(localStorage.getItem("player_ficha"));
+  if(!d) return;
+  nome.value=d.nome||"";
+  historia.value=d.historia||"";
+  agi.value=d.agi||0;
+  car.value=d.car||0;
+  ast.value=d.ast||0;
+  forca.value=d.forca||0;
+  vig.value=d.vig||0;
+  shots=d.shots||0;
+  tensao=d.tensao||0;
+  atualizar();
+}
+
+function addShot(){
+  shots = (shots+1)%3;
+  atualizar();
+}
+
+function rolar(){
+  diceArea.innerHTML="";
+  let qtd=parseInt(pool.value);
+  let falhas=0;
+
+  for(let i=0;i<qtd;i++){
+    let d=Math.floor(Math.random()*6)+1;
+    let el=document.createElement("div");
+    el.className="dice "+(d<=2?"fail":"success");
+    el.innerText=d;
+    diceArea.appendChild(el);
+    if(d<=2) falhas++;
+  }
+  tensao = Math.min(10, tensao + falhas);
+  atualizar();
+}
+
+function atualizar(){
+  shotsSpan.innerText = shots;
+  tensaoSpan.innerText = tensao;
+}
+
+/* MESTRE */
+function carregarMestre(){
+  listaPlayers.innerHTML="";
+  let lista = JSON.parse(localStorage.getItem("players")||"[]");
+  lista.forEach(p=>{
+    let div=document.createElement("div");
+    div.className="box";
+    div.innerHTML=`
+      <strong>${p.nome||"Sem nome"}</strong><br>
+      Shots: ${p.shots} | Tensão: ${p.tensao}
+    `;
+    listaPlayers.appendChild(div);
+  });
+}
+</script>
+
+</body>
+</html>
